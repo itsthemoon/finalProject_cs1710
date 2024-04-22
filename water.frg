@@ -82,8 +82,11 @@ pred traces {
 // Run scenarios to check model behavior under different mussel population levels
 run {
     eventually {
-        Lake.musselPopulation = LowPopulation
-        Lake.musselPopulation = MediumPopulation
+        // Lake.musselPopulation = LowPopulation
+        // Lake.musselPopulation = MediumPopulation
         Lake.musselPopulation = HighPopulation
     }
-} for 7 ZebraMussel
+} for 7 ZebraMussel, 1 Lake
+
+
+//need to model the movement of states
