@@ -1,4 +1,5 @@
 from z3 import *
+import matplotlib.pyplot as plt
 
 # Define variables
 zebra_mussel_population = Int('zebra_mussel_population')
@@ -101,5 +102,57 @@ if solver.check() == sat:
         print(f"  Aquatic Plant Growth: {model[aquatic_plant_growth_t]}")
         print(f"  Oxygen Level: {model[oxygen_level_t]}")
         print()
+else:
+    print("No satisfying assignment found.")
+
+
+if solver.check() == sat:
+    model = solver.model()
+
+    # Create lists to store the values for each variable over time
+    zebra_mussel_populations = []
+    water_clarities = []
+    aquatic_plant_growths = []
+    oxygen_levels = []
+
+    for t in range(num_time_steps):
+        zebra_mussel_population_t, water_clarity_t, aquatic_plant_growth_t, oxygen_level_t = variables[t]
+        zebra_mussel_populations.append(model[zebra_mussel_population_t].as_long())
+        water_clarities.append(model[water_clarity_t].as_decimal(2))
+        aquatic_plant_growths.append(model[aquatic_plant_growth_t].as_decimal(2))
+        oxygen_levels.append(model[oxygen_level_t].as_decimal(2))
+
+    # Create a figure with subplots
+    fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+
+    # Plot zebra mussel population
+    axs[0, 0].plot(zebra_mussel_populations)
+    axs[0, 0].set_title("Zebra Mussel Population")
+    axs[0, 0].set_xlabel("Time Step")
+    axs[0, 0].set_ylabel("Population")
+
+    # Plot water clarity
+    axs[0, 1].plot(water_clarities)
+    axs[0, 1].set_title("Water Clarity")
+    axs[0, 1].set_xlabel("Time Step")
+    axs[0, 1].set_ylabel("Clarity")
+
+    # Plot aquatic plant growth
+    axs[1, 0].plot(aquatic_plant_growths)
+    axs[1, 0].set_title("Aquatic Plant Growth")
+    axs[1, 0].set_xlabel("Time Step")
+    axs[1, 0].set_ylabel("Growth")
+
+    # Plot oxygen level
+    axs[1, 1].plot(oxygen_levels)
+    axs[1, 1].set_title("Oxygen Level")
+    axs[1, 1].set_xlabel("Time Step")
+    axs[1, 1].set_ylabel("Level")
+
+    # Adjust the spacing between subplots
+    plt.tight_layout()
+
+    # Display the plot
+    plt.show()
 else:
     print("No satisfying assignment found.")
