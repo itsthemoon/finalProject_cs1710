@@ -158,3 +158,10 @@ if solver.check() == sat:
     plt.show()
 else:
     print("No satisfying assignment found.")
+    
+    
+#TODO: 
+# add the water clarity improvement so that it can decrease eventually
+# add the aquatic plant growth so that it can decrease eventually
+# add the oxygen level so that it can decrease eventually
+
