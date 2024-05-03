@@ -61,12 +61,14 @@ for t in range(num_time_steps):
         solver.add(water_clarity_t == initial_water_clarity)
     else:
         prev_water_clarity = variables[t-1][1]
+        water_clarity_increase = (zebra_mussel_population_t / max_zebra_mussel_population)**0.5
         solver.add(water_clarity_t == If(
-            prev_water_clarity + (zebra_mussel_population_t / max_zebra_mussel_population)**0.5 >= 1,
+            prev_water_clarity + water_clarity_increase >= 1,
             1,
-            prev_water_clarity + (zebra_mussel_population_t / max_zebra_mussel_population)**0.5
+            prev_water_clarity + water_clarity_increase
         ))
-
+        solver.add(water_clarity_t >= prev_water_clarity)
+    
     # Aquatic plant growth based on water clarity threshold
     solver.add(aquatic_plant_growth_t == If(
         water_clarity_t >= water_clarity_threshold,
