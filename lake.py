@@ -7,7 +7,7 @@ water_clarity = Real('water_clarity')
 aquatic_plant_growth = Real('aquatic_plant_growth')
 oxygen_level = Real('oxygen_level')
 
-# Define relationships
+# Define relationships and constraints
 max_zebra_mussel_population = 1000
 max_aquatic_plant_growth = 1
 zebra_mussel_growth_rate = 0.1
@@ -93,21 +93,39 @@ for t in range(num_time_steps):
                prev_oxygen_level + aquatic_plant_growth_t * oxygen_production_factor - aquatic_plant_growth_t * oxygen_consumption_factor_plants - zebra_mussel_population_t / max_zebra_mussel_population * oxygen_consumption_factor_mussels)
         ))
 
-# Check if the constraints are satisfiable
+    # Add constraints for realistic ranges
+    solver.add(zebra_mussel_population_t >= 0)
+    solver.add(water_clarity_t >= 0, water_clarity_t <= 1)
+    solver.add(aquatic_plant_growth_t >= 0, aquatic_plant_growth_t <= max_aquatic_plant_growth)
+    solver.add(oxygen_level_t >= 0, oxygen_level_t <= 1)
+
+    # Add constraints for relationships between variables
+    solver.add(Implies(zebra_mussel_population_t >= max_zebra_mussel_population * 0.8, water_clarity_t >= 0.9))
+    solver.add(Implies(water_clarity_t < water_clarity_threshold, aquatic_plant_growth_t < 0.5 * max_aquatic_plant_growth))
+
+# Calculate specific scenarios
+scenario1 = And(variables[-1][0] >= max_zebra_mussel_population * 0.9, variables[-1][1] >= 0.95)
+scenario2 = variables[-1][1] < 0.4
+
+print("Scenario 1 (High zebra mussel population and high water clarity):")
+solver.push()
+solver.add(scenario1)
 if solver.check() == sat:
-    model = solver.model()
-    for t in range(num_time_steps):
-        zebra_mussel_population_t, water_clarity_t, aquatic_plant_growth_t, oxygen_level_t = variables[t]
-        print(f"Time Step {t}:")
-        print(f"  Zebra Mussel Population: {model[zebra_mussel_population_t]}")
-        print(f"  Water Clarity: {model[water_clarity_t]}")
-        print(f"  Aquatic Plant Growth: {model[aquatic_plant_growth_t]}")
-        print(f"  Oxygen Level: {model[oxygen_level_t]}")
-        print()
+    print("  Feasible")
 else:
-    print("No satisfying assignment found.")
+    print("  Infeasible")
+solver.pop()
 
+print("Scenario 2 (Low water clarity):")
+solver.push()
+solver.add(scenario2)
+if solver.check() == sat:
+    print("  Feasible")
+else:
+    print("  Infeasible")
+solver.pop()
 
+# Check if the constraints are satisfiable
 if solver.check() == sat:
     model = solver.model()
 
@@ -158,10 +176,3 @@ if solver.check() == sat:
     plt.show()
 else:
     print("No satisfying assignment found.")
-    
-    
-#TODO: 
-# add the water clarity improvement so that it can decrease eventually
-# add the aquatic plant growth so that it can decrease eventually
-# add the oxygen level so that it can decrease eventually
-
