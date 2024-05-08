@@ -35,13 +35,10 @@ oxygen_consumption_factor_plants = 0.2
 oxygen_consumption_factor_mussels = 0.4
 
 # Set initial conditions based on the data 
-# TODO: 
-# - Fix init for inconsistencies in the data (eg. no day 0)
-# - Customize water clarity and aquatic plant growth based on the data
-initial_zebra_mussel_population_control = mortality_data[(mortality_data["Day"] == 2) & (mortality_data["Treatment"] == "C")]["Alive"].mean()
-initial_zebra_mussel_population_treatment = mortality_data[(mortality_data["Day"] == 2) & (mortality_data["Treatment"] == "T")]["Alive"].mean()
-initial_water_clarity = 0.5
-initial_aquatic_plant_growth = 0.3
+initial_zebra_mussel_population_control = 50 # we can infer this from the completeness report. From Day 8 onwards, the "Alive" and "Dead" columns in the mortality data sum up to 50 for each tank. This suggests that the initial number of mussels in each tank was likely 50.
+initial_zebra_mussel_population_treatment = 50
+initial_water_clarity = 0.5 # TODO: adjust this given our data
+initial_aquatic_plant_growth = 0.3 # TODO: adjust this given our data
 initial_oxygen_level_control = water_chemistry_data[(water_chemistry_data["Day"] == 0) & (water_chemistry_data["Treatment"] == "C")]["Dissolved Oxygen"].mean()
 initial_oxygen_level_treatment = water_chemistry_data[(water_chemistry_data["Day"] == 0) & (water_chemistry_data["Treatment"] == "T")]["Dissolved Oxygen"].mean()
 initial_copper_concentration_control = copper_data[(copper_data["Day"] == 0) & (copper_data["Treatment"] == "C")]["Copper"].mean()
@@ -57,8 +54,8 @@ initial_temperature_treatment = water_chemistry_data[(water_chemistry_data["Day"
 initial_zebra_mussel_size = length_data["Length"].mean()
 initial_alkalinity_control = alkalinity_hardness_data[(alkalinity_hardness_data["Day"] == 0) & (alkalinity_hardness_data["Treatment"] == "C")]["Alkalinity"].mean()
 initial_alkalinity_treatment = alkalinity_hardness_data[(alkalinity_hardness_data["Day"] == 0) & (alkalinity_hardness_data["Treatment"] == "T")]["Alkalinity"].mean()
-initial_hardness_control = alkalinity_hardness_data[(alkalinity_hardness_data["Day"] == 0) & (alkalinity_hardness_data["Treatment"] == "C")]["Hardness"].mean()
-initial_hardness_treatment = alkalinity_hardness_data[(alkalinity_hardness_data["Day"] == 0) & (alkalinity_hardness_data["Treatment"] == "T")]["Hardness"].mean()
+initial_hardness_control = alkalinity_hardness_data[(alkalinity_hardness_data["Day"] == 1) & (alkalinity_hardness_data["Treatment"] == "C")]["Hardness"].mean()
+initial_hardness_treatment = alkalinity_hardness_data[(alkalinity_hardness_data["Day"] == 1) & (alkalinity_hardness_data["Treatment"] == "T")]["Hardness"].mean()
 
 # Create solvers for control and treatment scenarios
 solver_control = Solver()
@@ -99,7 +96,6 @@ for t in range(num_time_steps):
     hardness_t_treatment = Real(f'hardness_treatment_{t}')
 
     # Add variables to the lists 
-    # TODO: Adjust the variables depending on if we add more variables earlier (control/treatment)
     variables_control.append((zebra_mussel_population_t_control, water_clarity_t_control, aquatic_plant_growth_t_control, oxygen_level_t_control,
                               copper_concentration_t_control, ph_t_control, dissolved_oxygen_t_control, specific_conductance_t_control, temperature_t_control,
                               zebra_mussel_size_t_control, alkalinity_t_control, hardness_t_control))
@@ -139,8 +135,8 @@ for t in range(num_time_steps):
         solver_control.add(water_clarity_t_control == initial_water_clarity)
         solver_treatment.add(water_clarity_t_treatment == initial_water_clarity)
     else:
-        prev_water_clarity_control, _, _, _, _, _, _, _, _, _, _, _, _ = variables_control[t-1]
-        prev_water_clarity_treatment, _, _, _, _, _, _, _, _, _, _, _, _, _ = variables_treatment[t-1]
+        prev_water_clarity_control, _, _, _, _, _, _, _, _, _, _, _ = variables_control[t-1]
+        prev_water_clarity_treatment, _, _, _, _, _, _, _, _, _, _, _ = variables_treatment[t-1]
         
         # TODO: Adjust the relationship between zebra mussel population and water clarity using data to back us up
         water_clarity_increase_control = (zebra_mussel_population_t_control / max_zebra_mussel_population)**0.5
@@ -208,14 +204,23 @@ for t in range(num_time_steps):
         ))
 
     # Copper concentration based on treatment data
-    # TODO: Our copper data goes from day 1-9. We need to adjust the time step to match our data. Maybe we can use the previous day if we are missing a day of data
     if t == 0:
         solver_control.add(copper_concentration_t_control == initial_copper_concentration_control)
         solver_treatment.add(copper_concentration_t_treatment == initial_copper_concentration_treatment)
     else:
-        solver_control.add(copper_concentration_t_control == copper_data[(copper_data["Day"] == t) & (copper_data["Treatment"] == "C")]["Copper"].mean())
-        solver_treatment.add(copper_concentration_t_treatment == copper_data[(copper_data["Day"] == t) & (copper_data["Treatment"] == "T")]["Copper"].mean())
-    
+        # Get the mean copper concentration for the current day or use the previous day's value if missing
+        copper_concentration_control_today = copper_data[(copper_data["Day"] == t) & (copper_data["Treatment"] == "C")]["Copper"].mean()
+        copper_concentration_treatment_today = copper_data[(copper_data["Day"] == t) & (copper_data["Treatment"] == "T")]["Copper"].mean()
+
+        # If data for the current day is missing (resulting in NaN), use the previous day's data
+        if pd.isna(copper_concentration_control_today):
+            copper_concentration_control_today = copper_data[(copper_data["Day"] == t-1) & (copper_data["Treatment"] == "C")]["Copper"].mean()
+        if pd.isna(copper_concentration_treatment_today):
+            copper_concentration_treatment_today = copper_data[(copper_data["Day"] == t-1) & (copper_data["Treatment"] == "T")]["Copper"].mean()
+
+        solver_control.add(copper_concentration_t_control == copper_concentration_control_today)
+        solver_treatment.add(copper_concentration_t_treatment == copper_concentration_treatment_today)
+        
     # pH based on water chemistry data
     if t == 0:
         solver_control.add(ph_t_control == initial_ph_control)
@@ -241,7 +246,6 @@ for t in range(num_time_steps):
         solver_treatment.add(specific_conductance_t_treatment == water_chemistry_data[(water_chemistry_data["Day"] == t) & (water_chemistry_data["Treatment"] == "T")]["Specific Conductance"].mean())
         
     # Temperature based on water chemistry data
-    # TODO: Possibly adjust this to use a different control/treatment variable
     if t == 0:
         solver_control.add(temperature_t_control == initial_temperature_control)
         solver_treatment.add(temperature_t_treatment == initial_temperature_treatment)
@@ -255,8 +259,9 @@ for t in range(num_time_steps):
         solver_control.add(zebra_mussel_size_t_control == initial_zebra_mussel_size)
         solver_treatment.add(zebra_mussel_size_t_treatment == initial_zebra_mussel_size)
     else:
-        solver_control.add(zebra_mussel_size_t_control == length_data[(length_data["Day"] == t) & (length_data["Treatment"] == "C")]["Length"].mean())
-        solver_treatment.add(zebra_mussel_size_t_treatment == length_data[(length_data["Day"] == t) & (length_data["Treatment"] == "T")]["Length"].mean())
+        # Keep the mussel size constant over time as it does not change day by day
+        solver_control.add(zebra_mussel_size_t_control == initial_zebra_mussel_size)
+        solver_treatment.add(zebra_mussel_size_t_treatment == initial_zebra_mussel_size)
         
     # Alkalinity based on alkalinity and hardness data
     if t == 0:
@@ -301,6 +306,7 @@ for t in range(num_time_steps):
     solver_treatment.add(hardness_t_treatment >= 0)
 
     # Add constraints for relationships between variables
+    # TODO: Adjust the thresholds based on our data
     solver_control.add(Implies(zebra_mussel_population_t_control >= max_zebra_mussel_population * 0.8, water_clarity_t_control >= 0.9))
     solver_treatment.add(Implies(zebra_mussel_population_t_treatment >= max_zebra_mussel_population * 0.8, water_clarity_t_treatment >= 0.9))
     solver_control.add(Implies(water_clarity_t_control < water_clarity_threshold, aquatic_plant_growth_t_control < 0.5 * max_aquatic_plant_growth))
@@ -310,46 +316,3 @@ for t in range(num_time_steps):
     solver_control.add(Implies(copper_concentration_t_control >= 0.2, zebra_mussel_population_t_control <= 0.15 * initial_zebra_mussel_population_control))
     solver_treatment.add(Implies(copper_concentration_t_treatment >= 0.2, zebra_mussel_population_t_treatment <= 0.15 * initial_zebra_mussel_population_treatment))
   
-# Specific scenarios  
-scenario1_control = And(variables_control[-1][0] <= 0.01 * initial_zebra_mussel_population_control, variables_control[-1][1] >= 0.95)
-scenario1_treatment = And(variables_treatment[-1][0] <= 0.01 * initial_zebra_mussel_population_treatment, variables_treatment[-1][1] >= 0.95)
-scenario2_control = variables_control[-1][1] < 0.4
-scenario2_treatment = variables_treatment[-1][1] < 0.4
-print("Scenario 1 (99% zebra mussel mortality and high water clarity):")
-print("Control:")
-solver_control.push()
-solver_control.add(scenario1_control)
-if solver_control.check() == sat:
-    print("  Feasible")
-else:
-    print("  Infeasible")
-solver_control.pop()
-    
-print("Treatment:")
-solver_treatment.push()
-solver_treatment.add(scenario1_treatment)
-if solver_treatment.check() == sat:
-    print("  Feasible")
-else:
-    print("  Infeasible")
-solver_treatment.pop()
-
-
-print("Scenario 2 (Low water clarity):")
-print("Control:")
-solver_control.push()
-solver_control.add(scenario2_control)
-if solver_control.check() == sat:
-    print("  Feasible")
-else:
-    print("  Infeasible")
-solver_control.pop()
-
-print("Treatment:")
-solver_treatment.push()
-solver_treatment.add(scenario2_treatment)
-if solver_treatment.check() == sat:
-    print("  Feasible")
-else:
-    print("  Infeasible")
-solver_treatment.pop()
