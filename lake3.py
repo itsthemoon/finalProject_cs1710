@@ -80,7 +80,7 @@ num_days_treatment = Int('num_days_treatment')
 solver_control.add(num_days_control >= 0)
 solver_treatment.add(num_days_treatment >= 0)
 
-    # Simulate the model over time for control and treatment scenarios
+# Simulate the model over time for control and treatment scenarios
 for t in range(100):
     # Create new variables for each time step
     zebra_mussel_population_t_control = Int(f'zebra_mussel_population_control_{t}')
@@ -283,19 +283,19 @@ for t in range(50):
             solver_treatment.add(zebra_mussel_population_t_treatment == zebra_mussel_population_today)
         else:
             # Decrease the population by one each day, ensuring it does not go below zero
-            prev_zebra_mussel_population_treatment, _, _, _, _, _, _, _, _, _, _, _ = variables_treatment[t-1]
-            zebra_mussel_population_today = If(prev_zebra_mussel_population_treatment - 1 >= 0, prev_zebra_mussel_population_treatment - 1, 0)
-            solver_treatment.add(zebra_mussel_population_t_treatment == zebra_mussel_population_today)
+            # prev_zebra_mussel_population_treatment, _, _, _, _, _, _, _, _, _, _, _ = variables_treatment[t-1]
+            # zebra_mussel_population_today = If(prev_zebra_mussel_population_treatment - 1 >= 0, prev_zebra_mussel_population_treatment - 1, 0)
+            # solver_treatment.add(zebra_mussel_population_t_treatment == zebra_mussel_population_today)
             
             # Calculate population based on model from day 11 onwards
-            # mortality_factor_treatment = If(prev_copper_concentration_treatment >= 0.5, 0.99, If(prev_copper_concentration_treatment >= 0.2, 0.85, 0))
-            # solver_treatment.add(zebra_mussel_population_t_treatment == If(
-            #     And(prev_zebra_mussel_population_treatment >= max_zebra_mussel_population, prev_oxygen_level_treatment >= oxygen_threshold),
-            #     max_zebra_mussel_population,
-            #     If(prev_oxygen_level_treatment >= oxygen_threshold,
-            #     ToInt(prev_zebra_mussel_population_treatment * (1 - mortality_factor_treatment) * (1 - prev_zebra_mussel_population_treatment / max_zebra_mussel_population) * zebra_mussel_growth_rate),
-            #     If(prev_oxygen_level_treatment <= 0, 0, ToInt(prev_zebra_mussel_population_treatment * (1 - mortality_factor_treatment) * (1 - prev_oxygen_level_treatment) * zebra_mussel_growth_rate)))
-            # ))
+            mortality_factor_treatment = If(prev_copper_concentration_treatment >= 0.5, 0.99, If(prev_copper_concentration_treatment >= 0.2, 0.85, 0))
+            solver_treatment.add(zebra_mussel_population_t_treatment == If(
+                And(prev_zebra_mussel_population_treatment >= max_zebra_mussel_population, prev_oxygen_level_treatment >= oxygen_threshold),
+                max_zebra_mussel_population,
+                If(prev_oxygen_level_treatment >= oxygen_threshold,
+                ToInt(prev_zebra_mussel_population_treatment * (1 - mortality_factor_treatment) * (1 - prev_zebra_mussel_population_treatment / max_zebra_mussel_population) * zebra_mussel_growth_rate),
+                If(prev_oxygen_level_treatment <= 0, 0, ToInt(prev_zebra_mussel_population_treatment * (1 - mortality_factor_treatment) * (1 - prev_oxygen_level_treatment) * zebra_mussel_growth_rate)))
+            ))
 
     # Water clarity improvement with non-linear relationship
     # if t == 0:

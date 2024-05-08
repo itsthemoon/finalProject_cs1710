@@ -1,3 +1,6 @@
 z3-solver
 matplotlib
 pandas
+scipy
+statsmodels
+numpy
