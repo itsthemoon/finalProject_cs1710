@@ -30,9 +30,9 @@ class Analysis:
 
     def analyze(self, df_treatment, df_control):
         df_treatment.loc[:, 'Total'] = df_treatment['Alive'] + df_treatment['Dead']
-        df_treatment.loc[:, 'Mortality Rate'] = df_treatment['Dead'] / df_treatment['Total']
+        df_treatment.loc[:, 'Mortality Rate'] = df_treatment['Dead'] / df_treatment.loc[:, 'Total']
         df_control.loc[:, 'Total'] = df_control['Alive'] + df_control['Dead']
-        df_control.loc[:, 'Mortality Rate'] = df_control['Dead'] / df_control['Total']
+        df_control.loc[:, 'Mortality Rate'] = df_control['Dead'] / df_control.loc[:, 'Total']
 
         df_diff = pd.merge(df_treatment, df_control, on='Day', suffixes=('_treatment', '_control'))
         df_diff['Mortality Rate Difference'] = df_diff['Mortality Rate_treatment'] - df_diff['Mortality Rate_control']
@@ -60,9 +60,9 @@ class Analysis:
             'Specific Conductance_treatment': np.repeat(np.mean(df_diff['Specific Conductance_treatment']), 100),
             'Temperature_treatment': np.repeat(np.mean(df_diff['Temperature_treatment']), 100),
         })
+        plot_df = sm.add_constant(plot_df)  # Add constant for intercept
 
-        plot_df = sm.add_constant(plot_df)  # add constant for intercept
-        predictions = model.predict(plot_df)  # Ensure this DataFrame matches the model
+        predictions = model.predict(plot_df[X.columns])  # Use the same columns as in the model
 
         plt.plot(copper_range, predictions, 'r', linewidth=2)
         plt.xlabel('Copper Concentration (mg/L)')

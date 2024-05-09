@@ -4,3 +4,4 @@ pandas
 scipy
 statsmodels
 numpy
+scikit-learn

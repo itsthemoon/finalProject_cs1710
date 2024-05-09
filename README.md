@@ -28,11 +28,56 @@ Difficulties:
 
 PLAN:
 
-- create a mortality function that can calculate the decline of zebra mussels (with the copper stuff added)
-- using this function we can extrapolate to many more mussels and see how long it would take (if we keep using the treatment)
-  for them to reach a low population, or if it is even possible
+Step 1: Data Preparation
+First, you'll need to preprocess and clean the provided datasets. This includes:
 
-TODO:
+Handling missing values (e.g., removing rows with missing data or imputing values)
+Ensuring consistent data types and units across all variables
+Merging the datasets based on common columns (e.g., Tank, Treatment, Day) to create a single unified dataset
+Exploring the relationships between variables using scatter plots, correlation matrices, etc.
 
-- finish the mortality function analysis (claude)
-- starting from 1000 mussels track the population over time if we 
+Step 2: Build Mortality Rate Model
+Next, you'll build a model to predict zebra mussel mortality rate based on copper concentration and other water quality parameters.
+
+Select relevant features (e.g., copper concentration, temperature, pH, dissolved oxygen) as independent variables and mortality rate as the dependent variable
+Split the data into training and testing sets
+Try different modeling approaches (e.g., logistic regression, decision trees, random forests) and evaluate their performance using metrics like accuracy, precision, recall, and F1 score
+Choose the best-performing model and interpret its coefficients to understand the impact of each variable on mortality rate
+
+Step 3: Research Rhode Island Water Quality Standards (we used: https://www.epa.gov/sites/default/files/2014-12/documents/riwqs.pdf)
+To set up the constraints for your Z3 optimization, you need to know the acceptable ranges for water quality parameters in Rhode Island.
+
+Review Rhode Island's environmental regulations and water quality standards
+Identify the minimum and maximum allowable values for key parameters like temperature, pH, dissolved oxygen, etc.
+Consult with local experts if needed to clarify any ambiguities or get guidance on appropriate ranges
+
+Step 4: Determine Target Mortality Rate
+Work with Rhode Island environmental agencies or experts to determine an appropriate target mortality rate for effective zebra mussel control.
+
+Consider factors like the current extent of infestation, ecological impacts, and long-term management goals
+Set a specific numerical target (e.g., 90% mortality) to use as the objective in your Z3 problem
+
+Step 5: Formulate Z3 Optimization Problem
+Now you can set up your Z3 optimization problem:
+
+Define the decision variable as the copper concentration
+Set the objective function to minimize the copper concentration
+Add constraints for:
+
+Achieving the target mortality rate based on your predictive model
+Maintaining water quality parameters within Rhode Island's acceptable ranges
+
+Write the Z3 code to solve the optimization problem and find the optimal copper concentration
+
+Step 6: Analyze and Interpret Results
+Finally, interpret the Z3 results in the context of Rhode Island's zebra mussel management:
+
+Discuss the optimal copper concentration found and its predicted impact on mortality rate and water quality
+Consider the practical feasibility and cost of applying this treatment strategy
+Assess potential limitations of the approach and suggest areas for further research or field validation
+Highlight the broader applicability of this optimization approach for invasive species management in other regions
+
+Sources:
+
+- zebra mussels are more commonly found in warm water: https://seagrant.sunysb.edu/ais/pdfs/ZmusselQ-A.pdf
+- zebra mussels are more commonly found in fresh water: https://dem.ri.gov/sites/g/files/xkgbur861/files/programs/benviron/water/quality/surfwq/pdfs/lakes012.pdf
