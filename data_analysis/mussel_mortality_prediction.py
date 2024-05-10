@@ -18,9 +18,11 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.tree import DecisionTreeRegressor
+from sklearn.tree import DecisionTreeRegressor, export_text
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.tree import DecisionTreeRegressor
+from z3 import *
 from sklearn.metrics import mean_squared_error, r2_score
 import numpy as np
 import math
@@ -87,21 +89,108 @@ random_forest_reg_metrics = evaluate_model(random_forest_reg, X_train, y_train, 
 final_model = RandomForestRegressor()
 final_model.fit(features, target)
 
-def predict_mortality_rate(copper_conc, temperature, pH, dissolved_oxygen):
-    # Create a DataFrame with the input parameters
+def predict_mortality_rate(copper_conc, temperature, pH, dissolved_oxygen, treatment_t):
+    # Normalize the input values using the same scaling used in the machine learning model
+    scaled_copper, scaled_temperature, scaled_pH, scaled_dissolved_oxygen, scaled_treatment_t = normalize_inputs_numeric(copper_conc, temperature, pH, dissolved_oxygen, treatment_t)
+    
+    # Create a DataFrame with the normalized input parameters
     input_data = pd.DataFrame({
-        'Scaled_Copper': [copper_conc],
-        'Scaled_Temperature': [temperature],
-        'Scaled_pH': [pH],
-        'Scaled_Dissolved Oxygen': [dissolved_oxygen],
-        'Scaled_Treatment_C': [0],
-        'Scaled_Treatment_T': [1]
+        'Scaled_Copper': [scaled_copper],
+        'Scaled_Temperature': [scaled_temperature],
+        'Scaled_pH': [scaled_pH],
+        'Scaled_Dissolved Oxygen': [scaled_dissolved_oxygen],
+        'Scaled_Treatment_C': [1 - scaled_treatment_t],
+        'Scaled_Treatment_T': [scaled_treatment_t]
     })
-
+    
     # Use the trained model to make predictions
     predicted_mortality_rate = final_model.predict(input_data)[0]
     return predicted_mortality_rate
 
+# Create a simplified decision tree with depth constraints
+simplified_model = DecisionTreeRegressor(max_depth=5)
+simplified_model.fit(features, target)
+
+# Extract the decision tree rules
+tree_rules = export_text(simplified_model, feature_names=features.columns.tolist())
+# print("Decision Tree Rules:")
+# print(tree_rules)
+
+def normalize_inputs_numeric(copper_conc, temperature, pH, dissolved_oxygen, treatment_t):
+    # Normalize the input values using the same scaling used in the machine learning model
+    scaled_copper = (copper_conc - features['Scaled_Copper'].min()) / (features['Scaled_Copper'].max() - features['Scaled_Copper'].min())
+    scaled_temperature = (temperature - features['Scaled_Temperature'].min()) / (features['Scaled_Temperature'].max() - features['Scaled_Temperature'].min())
+    scaled_pH = (pH - features['Scaled_pH'].min()) / (features['Scaled_pH'].max() - features['Scaled_pH'].min())
+    scaled_dissolved_oxygen = (dissolved_oxygen - features['Scaled_Dissolved Oxygen'].min()) / (features['Scaled_Dissolved Oxygen'].max() - features['Scaled_Dissolved Oxygen'].min())
+    scaled_treatment_t = 1 if treatment_t == 1 else 0
+    
+    return scaled_copper, scaled_temperature, scaled_pH, scaled_dissolved_oxygen, scaled_treatment_t
+
+def normalize_inputs(copper_conc, temperature, pH, dissolved_oxygen, treatment_t):
+    # Normalize the input values using the same scaling used in the machine learning model
+    scaled_copper = (copper_conc - features['Scaled_Copper'].min()) / (features['Scaled_Copper'].max() - features['Scaled_Copper'].min())
+    scaled_temperature = (temperature - features['Scaled_Temperature'].min()) / (features['Scaled_Temperature'].max() - features['Scaled_Temperature'].min())
+    scaled_pH = (pH - features['Scaled_pH'].min()) / (features['Scaled_pH'].max() - features['Scaled_pH'].min())
+    scaled_dissolved_oxygen = (dissolved_oxygen - features['Scaled_Dissolved Oxygen'].min()) / (features['Scaled_Dissolved Oxygen'].max() - features['Scaled_Dissolved Oxygen'].min())
+    scaled_treatment_t = If(treatment_t == 1, 1, 0)
+
+    return scaled_copper, scaled_temperature, scaled_pH, scaled_dissolved_oxygen, scaled_treatment_t
+
+def predict_mortality_rate_simplified(copper_conc, temperature, pH, dissolved_oxygen, treatment_t):
+    # Normalize the input values
+    scaled_copper, scaled_temperature, scaled_pH, scaled_dissolved_oxygen, scaled_treatment_t = normalize_inputs(copper_conc, temperature, pH, dissolved_oxygen, treatment_t)
+
+    # Translate the decision tree rules into Z3's If conditions
+    return If(scaled_temperature <= 0.25,
+              If(scaled_pH <= 0.46,
+                 If(scaled_dissolved_oxygen <= 0.40,
+                    If(scaled_copper <= 0.42,
+                       If(scaled_copper <= 0.29,
+                          0.95,
+                          0.98),
+                       If(scaled_dissolved_oxygen <= 0.16,
+                          0.99,
+                          1.00)),
+                    If(scaled_copper <= 0.45,
+                       If(scaled_pH <= 0.40,
+                          0.92,
+                          0.99),
+                       If(scaled_dissolved_oxygen <= 0.47,
+                          0.78,
+                          0.88))),
+                 If(scaled_dissolved_oxygen <= 0.52,
+                    If(scaled_temperature <= 0.06,
+                       0.90,
+                       If(scaled_dissolved_oxygen <= 0.43,
+                          0.82,
+                          0.79)),
+                    If(scaled_copper <= 0.87,
+                       If(scaled_dissolved_oxygen <= 0.61,
+                          0.99,
+                          0.95),
+                       If(scaled_dissolved_oxygen <= 0.60,
+                          0.92,
+                          0.88)))),
+              If(scaled_copper <= 0.51,
+                 If(scaled_treatment_t <= 0.50,
+                    0.00,
+                    If(scaled_copper <= 0.37,
+                       If(scaled_dissolved_oxygen <= 0.94,
+                          0.28,
+                          0.31),
+                       If(scaled_pH <= 0.97,
+                          0.20,
+                          0.24))),
+                 If(scaled_pH <= 0.52,
+                    If(scaled_pH <= 0.50,
+                       0.62,
+                       If(scaled_copper <= 0.67,
+                          0.70,
+                          0.62)),
+                    If(scaled_dissolved_oxygen <= 0.52,
+                       0.53,
+                       0.60))))
+    
 # Model Selection Summary:
 # After evaluating three regression models (Linear Regression, Decision Tree Regressor, and Random Forest Regressor) 
 # on their ability to predict zebra mussel mortality rates, the Random Forest Regressor was chosen as the final model. 
