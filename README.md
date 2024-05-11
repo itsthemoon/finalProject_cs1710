@@ -46,3 +46,6 @@ Potential extensions could include modeling the impacts on other parts of the ec
 
 - Jackson Davis
 - Yonas Amha
+
+## Note
+The demo video can be found in this github repo, titled: "1710demovid.mp4"
